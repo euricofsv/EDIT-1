@@ -6,10 +6,10 @@ RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir --upgrade numpy pandas
 COPY . .
 EXPOSE 5000
-CMD ["python", "app.py"]
+#CMD ["python", "app.py"]
 
 
-#CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
 
 #xomando para iniciar o Gunicorn (adicionei isto para a API funcionar no render(?)) - atualizar tambem o ficheiro requirements
 #CMD ["gunicorn", "-b", "0.0.0.0:$PORT", "app:app"]
