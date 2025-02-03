@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>A minha primeira API (EDIT)</title>
-
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
@@ -58,27 +57,90 @@
         .file-input label:hover {
             background-color: #dee2e6;
         }
+        .error-message {
+            color: red;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none; /* Inicialmente oculto */
+        }
+        .preview {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f1f1f1;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Upload de Arquivo Parquet</h1>
+        <h1>Seleciona um ficheiro parquet</h1>
         <form action="/processar_parquet" method="post" enctype="multipart/form-data">
             <div class="file-input">
                 <label for="file" id="file-label">Clique para selecionar o arquivo Parquet</label>
                 <input type="file" name="file" id="file" accept=".parquet" required>
+                <div id="error-message" class="error-message">Por favor, selecione um arquivo no formato Parquet (.parquet).</div>
             </div>
             <button type="submit" class="btn btn-primary">GERAR KPIs</button>
         </form>
+
+        <!-- Área de pré-visualização -->
+        <div class="preview" id="preview">
+            <h3>Pré-visualização do Arquivo</h3>
+            <pre id="preview-content">Nenhum arquivo selecionado.</pre>
+        </div>
     </div>
 
-
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Biblioteca para ler arquivos Parquet -->
+    <script src="https://cdn.jsdelivr.net/npm/parquetjs/dist/parquet.min.js"></script>
     <script>
         document.getElementById('file').addEventListener('change', function(event) {
-            var fileName = event.target.files[0].name;
-            document.getElementById('file-label').textContent = fileName;
+            const file = event.target.files[0];
+            const errorMessage = document.getElementById('error-message');
+            const previewContent = document.getElementById('preview-content');
+
+            // Verifica se o arquivo é do tipo Parquet
+            if (file && file.name.endsWith('.parquet')) {
+                errorMessage.style.display = 'none'; // Oculta a mensagem de erro
+                previewContent.textContent = 'Carregando...';
+
+                // Lê o arquivo Parquet
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const arrayBuffer = e.target.result;
+                    previewParquetFile(arrayBuffer, previewContent);
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                errorMessage.style.display = 'block'; // Exibe a mensagem de erro
+                previewContent.textContent = 'Nenhum arquivo selecionado.';
+            }
         });
+
+        // Função para pré-visualizar o arquivo Parquet
+        async function previewParquetFile(arrayBuffer, previewContent) {
+            try {
+                const parquetReader = await parquet.ParquetReader.openBuffer(arrayBuffer);
+                const cursor = parquetReader.getCursor();
+                const rows = [];
+
+                // Lê as primeiras 5 linhas do arquivo
+                for (let i = 0; i < 5; i++) {
+                    const row = await cursor.next();
+                    if (!row) break;
+                    rows.push(JSON.stringify(row, null, 2));
+                }
+
+                previewContent.textContent = rows.join('\n');
+                parquetReader.close();
+            } catch (error) {
+                previewContent.textContent = 'Erro ao ler o arquivo Parquet.';
+                console.error(error);
+            }
+        }
     </script>
 </body>
 </html>
