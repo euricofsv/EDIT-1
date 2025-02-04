@@ -1,11 +1,10 @@
 
 ################################################
-A API está integrada numa pagina html e serve para fazer o upload de ficheiros Parquet, oferecendo funcionalidades de pré-visualização no browser das primeiras linhas (isto pode ser usado)
-com qualquer ficheiro parquet e com a opção de geração de KPIs em formato Excel (os KPIs só serão gerados se o ficheiro parquet tiver a estrutura do ficheiro disponibilizado nas aulas da EDIT no curso DATA OPS)
+- A API está integrada numa pagina html e serve para fazer o upload de ficheiros parquet, oferecendo funcionalidades de pré-visualização no browser das primeiras linhas (isto pode ser usado com qualquer ficheiro parquet. Contudo a opção de geração de KPIs em formato Excel só será criado se o ficheiro parquet tiver a estrutura do ficheiro disponibilizado nas aulas da EDIT no curso DATA OPS)
 
 ############ Funcionalidades ###############
--Pré-visualização de ficheiros Parquet: Exibe as primeiras 5 linhas do ficheiro Parquet selecionado.
--Geração de KPIs: Processa o ficheiro Parquet e gera um ficheiro Excel com alguns KPIs.
+- Pré-visualização de ficheiros Parquet: Exibe as primeiras 5 linhas do ficheiro Parquet selecionado.
+- Geração de KPIs: Processa o ficheiro Parquet e gera um ficheiro Excel com alguns KPIs.
 
 ############## Como Usar ################
 ###### Pré-requisitos
@@ -13,6 +12,7 @@ com qualquer ficheiro parquet e com a opção de geração de KPIs em formato Ex
 - Chrome, Firefox, Edge
 - Ficheiro "dados_sensores_5000.parquet" ou um outro com a mesma estrutura
 
+Como usar ###### 
 
 1. **Selecionar o ficheiro Parquet**:
    - Clique no botão "Clique para selecionar o ficheiro Parquet" para escolher o ficheiro desejado.
