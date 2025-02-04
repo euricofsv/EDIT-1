@@ -75,7 +75,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Seleciona um ficheiro parquet</h1>
+        <h1>Seleciona o ficheiro Parquet</h1>
         <form action="/processar_parquet" method="post" enctype="multipart/form-data">
             <div class="file-input">
                 <label for="file" id="file-label">Clique para selecionar o arquivo Parquet</label>
@@ -95,12 +95,23 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Biblioteca para ler arquivos Parquet -->
-    <script src="https://cdn.jsdelivr.net/npm/parquetjs/dist/parquet.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/parquet-wasm@0.4.1/dist/parquet_wasm.js"></script>
     <script>
-        document.getElementById('file').addEventListener('change', function(event) {
+        // Inicializa o parquet-wasm
+        async function initParquetWasm() {
+            await parquet_wasm;
+        }
+
+        document.getElementById('file').addEventListener('change', async function(event) {
             const file = event.target.files[0];
             const errorMessage = document.getElementById('error-message');
             const previewContent = document.getElementById('preview-content');
+            const fileLabel = document.getElementById('file-label');
+
+            // Exibe o nome do arquivo selecionado
+            if (file) {
+                fileLabel.textContent = file.name;
+            }
 
             // Verifica se o arquivo é do tipo Parquet
             if (file && file.name.endsWith('.parquet')) {
@@ -109,9 +120,26 @@
 
                 // Lê o arquivo Parquet
                 const reader = new FileReader();
-                reader.onload = function(e) {
+                reader.onload = async function(e) {
                     const arrayBuffer = e.target.result;
-                    previewParquetFile(arrayBuffer, previewContent);
+                    try {
+                        await initParquetWasm();
+                        const parquetFile = parquet_wasm.ParquetFile.fromBuffer(arrayBuffer);
+                        const metadata = parquetFile.metadata();
+                        const rows = [];
+
+                        // Lê as primeiras 5 linhas do arquivo
+                        const rowCount = Math.min(5, metadata.num_rows);
+                        for (let i = 0; i < rowCount; i++) {
+                            const row = parquetFile.row(i);
+                            rows.push(JSON.stringify(row, null, 2));
+                        }
+
+                        previewContent.textContent = rows.join('\n');
+                    } catch (error) {
+                        previewContent.textContent = 'Erro ao ler o arquivo Parquet.';
+                        console.error(error);
+                    }
                 };
                 reader.readAsArrayBuffer(file);
             } else {
@@ -119,28 +147,6 @@
                 previewContent.textContent = 'Nenhum arquivo selecionado.';
             }
         });
-
-        // Função para pré-visualizar o arquivo Parquet
-        async function previewParquetFile(arrayBuffer, previewContent) {
-            try {
-                const parquetReader = await parquet.ParquetReader.openBuffer(arrayBuffer);
-                const cursor = parquetReader.getCursor();
-                const rows = [];
-
-                // Lê as primeiras 5 linhas do arquivo
-                for (let i = 0; i < 5; i++) {
-                    const row = await cursor.next();
-                    if (!row) break;
-                    rows.push(JSON.stringify(row, null, 2));
-                }
-
-                previewContent.textContent = rows.join('\n');
-                parquetReader.close();
-            } catch (error) {
-                previewContent.textContent = 'Erro ao ler o arquivo Parquet.';
-                console.error(error);
-            }
-        }
     </script>
 </body>
 </html>
