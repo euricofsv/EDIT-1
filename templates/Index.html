@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pré-visualização Parquet</title>
+    <title>A minha primeira API (EDIT)</title>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
@@ -23,9 +24,22 @@
             text-align: center;
             margin-bottom: 20px;
         }
+        .form-label {
+            font-weight: bold;
+            color: #495057;
+        }
+        .btn-primary {
+            background-color: #0d6efd;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        .btn-primary:hover {
+            background-color: #0b5ed7;
+        }
         .file-input {
             margin-bottom: 20px;
-            position: relative;
         }
         .file-input input[type="file"] {
             display: none;
@@ -43,102 +57,128 @@
         .file-input label:hover {
             background-color: #dee2e6;
         }
-        .file-name {
-            display: block;
-            margin-top: 5px;
-            text-align: center;
-            font-size: 14px;
-            color: #495057;
-        }
-        .error-message {
-            color: red;
-            font-size: 14px;
-            margin-top: 10px;
-            display: none;
-        }
-        .preview {
+        .preview-box {
             margin-top: 20px;
-            padding: 10px;
-            background-color: #f1f1f1;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
             border-radius: 5px;
-            max-height: 300px;
-            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-height: 400px; /* Altura máxima da box */
+            overflow-y: auto; /* Adiciona rolagem vertical */
+        }
+        .preview-box h2 {
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: #343a40;
+        }
+        .button-container {
+            display: flex;
+            gap: 10px; /* Espaço entre os botões */
+            margin-top: 20px;
+        }
+        .button-container button {
+            flex: 1; /* Faz os botões ocuparem o espaço disponível */
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Upload e Pré-visualização Parquet</h1>
-        <div class="file-input">
-            <label for="file" id="file-label">Clique para selecionar o arquivo Parquet</label>
-            <input type="file" id="file" accept=".parquet">
-            <span id="file-name" class="file-name">Nenhum arquivo selecionado</span>
-            <div id="error-message" class="error-message">Por favor, selecione um arquivo no formato Parquet (.parquet).</div>
-        </div>
+        <h1>Seleciona o ficheiro parquet!</h1>
+        <form id="upload-form">
+            <div class="file-input">
+                <label for="file" id="file-label">Clique para selecionar o arquivo Parquet</label>
+                <input type="file" name="file" id="file" accept=".parquet" required>
+            </div>
 
-        <!-- Área de pré-visualização -->
-        <div class="preview" id="preview">
-            <h3>Pré-visualização do Arquivo</h3>
-            <pre id="preview-content">Nenhum arquivo selecionado.</pre>
+            <!-- Container para os botões -->
+            <div class="button-container">
+                <button type="button" id="preview-button" class="btn btn-secondary">Pré-visualizar</button>
+                <button type="submit" class="btn btn-primary">GERAR KPIs</button>
+            </div>
+        </form>
+
+        <!-- Div para exibir a pré-visualização -->
+        <div id="preview-section" class="preview-box" style="display: none;">
+            <h2>Pré-visualização (Primeiras 5 linhas)</h2>
+            <div id="preview-content"></div>
+            <button type="button" id="clear-button" class="btn btn-danger mt-3">Limpar Pré-visualização</button>
         </div>
     </div>
 
-    <!-- Apache Arrow JS -->
-    <script type="module">
-        import * as arrow from "https://cdn.jsdelivr.net/npm/apache-arrow@11.0.0/+esm";
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('file').addEventListener('change', function(event) {
+            var fileName = event.target.files[0].name;
+            document.getElementById('file-label').textContent = fileName;
+        });
 
-        document.getElementById('file').addEventListener('change', async function(event) {
-            const file = event.target.files[0];
-            const errorMessage = document.getElementById('error-message');
-            const previewContent = document.getElementById('preview-content');
-            const fileNameDisplay = document.getElementById('file-name');
-
-            if (file) {
-                fileNameDisplay.textContent = file.name; // Exibir o nome do ficheiro
+        // Pré-visualização
+        document.getElementById('preview-button').addEventListener('click', function() {
+            var fileInput = document.getElementById('file');
+            if (fileInput.files.length === 0) {
+                alert('Por favor, selecione um ficheiro Parquet.');
+                return;
             }
 
-            if (file && file.name.endsWith('.parquet')) {
-                errorMessage.style.display = 'none';
-                previewContent.textContent = 'Carregando...';
+            var formData = new FormData();
+            formData.append('file', fileInput.files[0]);
 
-                try {
-                    const reader = new FileReader();
-                    reader.onload = async function(e) {
-                        try {
-                            const buffer = e.target.result;
-                            const table = arrow.tableFromIPC(buffer); // Lê o Parquet
+            fetch('/preview_parquet', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                // Exibe a pré-visualização na div
+                document.getElementById('preview-content').innerHTML = data;
+                document.getElementById('preview-section').style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Erro ao pré-visualizar o ficheiro:', error);
+            });
+        });
 
-                            if (table.numRows === 0) {
-                                previewContent.textContent = "Arquivo vazio.";
-                                return;
-                            }
+        // Limpar pré-visualização
+        document.getElementById('clear-button').addEventListener('click', function() {
+            document.getElementById('preview-content').innerHTML = '';
+            document.getElementById('preview-section').style.display = 'none';
+            document.getElementById('file').value = ''; // Limpa o input de arquivo
+            document.getElementById('file-label').textContent = 'Clique para selecionar o arquivo Parquet';
+        });
 
-                            let previewText = "Pré-visualização das primeiras 5 linhas:\n";
-                            const numRows = Math.min(5, table.numRows);
-                            for (let i = 0; i < numRows; i++) {
-                                const row = {};
-                                table.schema.fields.forEach((field, colIndex) => {
-                                    row[field.name] = table.getColumnAt(colIndex).get(i);
-                                });
-                                previewText += JSON.stringify(row, null, 2) + "\n";
-                            }
+        // Envio do formulário para gerar KPIs
+        document.getElementById('upload-form').addEventListener('submit', function(event) {
+            event.preventDefault();
 
-                            previewContent.textContent = previewText;
-                        } catch (error) {
-                            previewContent.textContent = 'Erro ao ler o arquivo Parquet.';
-                            console.error(error);
-                        }
-                    };
-                    reader.readAsArrayBuffer(file);
-                } catch (error) {
-                    errorMessage.style.display = 'block';
-                    previewContent.textContent = 'Erro ao carregar o arquivo.';
-                    console.error(error);
-                }
-            } else {
-                errorMessage.style.display = 'block';
-                previewContent.textContent = 'Nenhum arquivo selecionado.';
+            var fileInput = document.getElementById('file');
+            if (fileInput.files.length === 0) {
+                alert('Por favor, selecione um ficheiro Parquet.');
+                return;
             }
+
+            var formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            fetch('/processar_parquet', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                // Cria um link para download do arquivo Excel
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `KPIs_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(error => {
+                console.error('Erro ao gerar KPIs:', error);
+            });
         });
     </script>
 </body>

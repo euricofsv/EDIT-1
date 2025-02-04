@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file, render_template
+from flask import Flask, request, send_file, render_template, jsonify
 import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment
@@ -8,58 +8,60 @@ import io
 
 app = Flask(__name__)
 
-#Rota para a página inicial com o formulário de upload
+#pagina inicial
 @app.route("/")
 def home():
     return render_template("Index.html")
 
-#Rota para processar o arquivo Parquet
+#endpoint para criar o ficheiro dos kpis a partir do ficheiro da aula/exercicio
 @app.route("/processar_parquet", methods=["POST"])
 def processar_parquet():
-    #Verifica se o arquivo foi enviado
+    #verifica se o arquivo foi enviado
     if "file" not in request.files:
         return "Nenhum arquivo enviado", 400
 
     file = request.files["file"]
 
-    #Ler o arquivo Parquet
+    #read
     try:
         df = pd.read_parquet(file)
     except Exception as e:
         return f"Erro ao ler o arquivo Parquet: {str(e)}", 400
 
-    #Corrigir erro do datetime
+    #verificar se as colunas necessárias existem
+    required_columns = ["PurchaseDate", "TotalPrice", "PricePerUnit", "Quantity", "CustomerID", "Category", "Region", "ProductName", "PaymentMethod", "TransactionID"]
+    for col in required_columns:
+        if col not in df.columns:
+            return f"Coluna '{col}' não encontrada no arquivo Parquet", 400
+
+    #corrigir erro do datetime(nao faz nada com o ficheiro de exemplo)
     df["PurchaseDate"] = pd.to_datetime(df["PurchaseDate"], errors="coerce")
 
-    #corrigir nulos e numeros
+    #crrigir nulos e números(nao faz nada com o ficheiro de exemplo)(nao faz nada com o ficheiro de exemplo)
     for col in df.columns:
-        if df[col].dtype == "object": 
-            df[col] = df[col].fillna("N/A")  # #corrigir com na se a coluna for string
+        if df[col].dtype == "object":
+            df[col] = df[col].fillna("N/A")  #corrigir com "N/A" se a coluna for string(nao faz nada com o ficheiro de exemplo)
         else:
-           df[col] = df[col].fillna(0) #corrigir com 0 se a colunar for numerica
+            df[col] = df[col].fillna(0)  #corrigir com 0 se a coluna for numérica(nao faz nada com o ficheiro de exemplo)
 
-    #alterar os brancos para not applicable
+    #alterar os brancos para "Not Applicable"(nao faz nada com o ficheiro de exemplo)
     for col in df.columns:
-        if df[col].dtype == "object":  
+        if df[col].dtype == "object":
             df[col] = df[col].apply(lambda x: "N/A" if isinstance(x, str) and x.strip() == "" else x)
 
-    #remover duplciados
+    #remover duplicados(nao faz nada com o ficheiro de exemplo)
     duplicates = df.duplicated().sum()
     if duplicates > 0:
-        #print(f"foram encontradas {duplicates} linhas duplicadas")
         df = df.drop_duplicates()
 
-
-    #valores numéricos como string
+    #valores numéricos como string (nao faz nada com o ficheiro de exemplo)
     colunas_num = ["TotalPrice", "PricePerUnit", "Quantity", "CustomerID"]
     for col in colunas_num:
         if df[col].apply(lambda x: isinstance(x, str)).any():
-            #print(f"A coluna '{col}' tem valores não numéricos")
             df[col] = pd.to_numeric(df[col], errors="coerce")
             df[col].fillna(0, inplace=True)
-            #print(f"Valores não numéricos na coluna '{col}' foram alterados")
 
-    #arredondar números float para 2 casas decimais
+    #arrendondar números float para 2 casas decimais
     df["TotalPrice"] = df["TotalPrice"].round(2)
     df["PricePerUnit"] = df["PricePerUnit"].round(2)
 
@@ -84,7 +86,7 @@ def processar_parquet():
     vendas_diarias = df.groupby(df["PurchaseDate"].dt.date)["TotalPrice"].sum()
     clientes_unicos = df["CustomerID"].nunique()
 
-    #Dicionário de KPIs
+    #dicionario dos KPIs genericos
     resultados = {
         "KPI": [
             "Receita Total",
@@ -109,27 +111,27 @@ def processar_parquet():
     #KPIs para DataFrame
     df_resultados = pd.DataFrame(resultados)
 
-    #Vendas por categoria
+    #vendas por categoria
     vendas_por_categoria_df = vendas_por_categoria.reset_index()
     vendas_por_categoria_df.columns = ['Categoria', 'Vendas']
 
-    #Vendas por categoria e região
+    #vendas por categoria e região
     vendas_por_categoria_regiao_df = vendas_por_categoria_regiao.reset_index()
     vendas_por_categoria_regiao_df.columns = ['Categoria', 'Região', 'Vendas']
 
-    #Top 5 produtos
+    #top 5 produtos
     top_produtos_df = top_produtos.reset_index()
     top_produtos_df.columns = ['ID', 'Regiao', 'Produto', 'Quantidade Vendida (TOP 5)']
 
-    #Vendas por método de pagamento
+    #vendas por método de pagamento
     vendas_por_metodo_pagamento_df = vendas_por_metodo_pagamento.reset_index()
     vendas_por_metodo_pagamento_df.columns = ['Método de Pagamento', 'Vendas']
 
-    #Vendas diárias
+    #vendas diárias
     vendas_diarias_df = vendas_diarias.reset_index()
     vendas_diarias_df.columns = ['Data', 'Vendas Diárias']
 
-    #Criar um arquivo Excel em memória
+    #criar um arquivo Excel em memória
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df_resultados.to_excel(writer, sheet_name="KPIS", index=False)
@@ -139,7 +141,7 @@ def processar_parquet():
         top_produtos_df.to_excel(writer, sheet_name="Top Produtos", index=False)
         vendas_por_metodo_pagamento_df.to_excel(writer, sheet_name="Vendas por Método de Pagamento", index=False)
 
-    #Retornar o arquivo Excel como resposta
+    #retorna o ficheiro kpis como resposta
     output.seek(0)
     return send_file(
         output,
@@ -148,14 +150,34 @@ def processar_parquet():
         download_name=f"KPIs_{datetime.now().strftime('%Y%m%d')}.xlsx"
     )
 
-#Executar a aplicação
+#endpoint para pré-visualização do arquivo Parquet
+@app.route('/preview_parquet', methods=['POST'])
+def preview_parquet():
+    if 'file' not in request.files:
+        return jsonify({'error': 'Nenhum ficheiro enviado'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'Nenhum ficheiro selecionado'}), 400
+
+    try:
+        #read
+        df = pd.read_parquet(file)
+
+        #converte as primeiras 5 linhas para HTML
+        preview_html = df.head().to_html(index=False, classes="table table-striped")
+
+        #html da tabela
+        return preview_html
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Executar a aplicação
 #if __name__ == "__main__":
-#    app.run(debug=True)
+    #app.run(debug=True)
 
-#colocar este pedaço de codigo para funcionar no render
-#import os
-
+# Para implantação no Render:
+import os
 if __name__ == "__main__":
-   import os
-   port = int(os.environ.get("PORT", 5000))  # Usa a porta definida pelo Render ou 5000 como fallback
-   app.run(host="0.0.0.0", port=port, debug=False)  # Desative o debug em produção
+     port = int(os.environ.get("PORT", 5000))  # Usa a porta definida pelo Render ou 5000 como fallback
+     app.run(host="0.0.0.0", port=port, debug=False)  
