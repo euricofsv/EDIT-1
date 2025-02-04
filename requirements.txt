@@ -3,3 +3,4 @@ pandas
 openpyxl
 pyarrow
 gunicorn
+scikit-learn
