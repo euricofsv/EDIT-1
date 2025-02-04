@@ -87,7 +87,7 @@
         <h1>Seleciona o ficheiro parquet!</h1>
         <form id="upload-form">
             <div class="file-input">
-                <label for="file" id="file-label">Clique para selecionar o arquivo Parquet</label>
+                <label for="file" id="file-label">Clique para selecionar o ficheiro Parquet</label>
                 <input type="file" name="file" id="file" accept=".parquet" required>
             </div>
 
@@ -143,7 +143,7 @@
         document.getElementById('clear-button').addEventListener('click', function() {
             document.getElementById('preview-content').innerHTML = '';
             document.getElementById('preview-section').style.display = 'none';
-            //document.getElementById('file').value = ''; // Limpa o input de arquivo
+            //document.getElementById('file').value = ''; // Limpa o input de ficheiro
             //document.getElementById('file-label').textContent = 'Clique para selecionar o ficheiro Parquet';
         });
 
@@ -166,7 +166,7 @@
             })
             .then(response => response.blob())
             .then(blob => {
-                // Cria um link para download do arquivo Excel
+                // Cria um link para download do ficheiro Excel
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
