@@ -26,3 +26,7 @@ Como usar ######
 ### Endpoints da API
 /preview_parquet: Recebe o ficheiro Parquet e retorna as primeiras 5 linhas para pré-visualização em html.
 /processar_parquet: Recebe o ficheiro Parquet, processa os dados e retorna um ficheiro Excel com alguns KPIs.
+
+
+
+Nota::: como pedido no exercico,o get_info.py foi apenas um exercicio inicial para verificar alguns detalhes do ficheiro e decidi não o colocar no script da API..
